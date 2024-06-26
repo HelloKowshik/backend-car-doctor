@@ -17,7 +17,8 @@ const client = new MongoClient(uri, {
 });
 
 app.use(cors({
-    origin:['http://localhost:5173'],
+    origin:['https://car-doctor-cd2b0.web.app', 
+        'https://car-doctor-cd2b0.firebaseapp.com'],
     credentials: true
 }));
 app.use(express.json());
@@ -31,8 +32,8 @@ const logger = async(req, res, next) => {
 }
 
 const verifyToken = async(req, res, next) => {
-    const token = req.cookies?.token;
-    console.log(`Token in MW: ${token}`);
+    const token = req?.cookies?.token;
+    // console.log(`Token in MW: ${token}`);
     if(!token){
         return res.status(401).send({message: 'not authorized'});
     }
@@ -59,7 +60,12 @@ async function run() {
     app.post('/jwt', async(req, res) => {
         const user = req.body;
         const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn:'1h'});
-        res.cookie('token', token, {httpOnly: true, secure: false}).send({success: true});
+        res.cookie('token', token, {httpOnly: true, secure: true, sameSite: 'none'}).send({success: true});
+    });
+
+    app.post('/logout', async(req, res) => {
+        const user = req.body;
+        res.clearCookie('token', {maxAge: 0}).send({success: true});
     });
 
     app.get('/services', async(req, res) => {
@@ -80,7 +86,8 @@ async function run() {
 
     app.get('/bookings', verifyToken, async(req, res) => {
         let query = {};
-        // console.log(req.cookies.token);
+        console.log('Query Pram: ', req.query.email);
+        console.log('token Owner Info: ', req.user);
         if(req.query.email !== req.user.email){
             return res.status(403).send({message: 'forbidden access'});
         }
